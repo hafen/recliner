@@ -19,11 +19,34 @@
       timer,
       options = $.extend({
         attrib: "data-src", // selector for attribute containing the media src
-	      throttle: 300,      // millisecond interval at which to process events
-	      threshold: 100,     // scroll distance from element before its loaded
-	      printable: true,    // be printer friendly and show all elements on document print
-	      live: true          // auto bind lazy loading to ajax loaded elements
+        throttle: 300,      // millisecond interval at which to process events
+        threshold: 100,     // scroll distance from element before its loaded
+        printable: true,    // be printer friendly and show all elements on document print
+        live: true          // auto bind lazy loading to ajax loaded elements
       }, options);
+
+    function throttle(fn, threshhold, scope) {
+      threshhold || (threshhold = 250);
+      var last,
+          deferTimer;
+      return function () {
+        var context = scope || this;
+
+        var now = +new Date,
+            args = arguments;
+        if (last && now < last + threshhold) {
+          // hold on to it
+          clearTimeout(deferTimer);
+          deferTimer = setTimeout(function () {
+            last = now;
+            fn.apply(context, args);
+          }, threshhold);
+        } else {
+          last = now;
+          fn.apply(context, args);
+        }
+      };
+    }
 
     // load the element source
     function load(e) {
@@ -95,11 +118,9 @@
     }
 
     // bind lazy loading events
-    $w.on("scroll.lazy resize.lazy lookup.lazy", function(ev) {
-      if (timer)
-        clearTimeout(timer); // throttle events for best performance
-      timer = setTimeout(function() { $w.trigger("lazyupdate"); }, options.throttle);
-    });
+    $w.on("scroll.lazy resize.lazy lookup.lazy", throttle(function(ev) {
+      $w.trigger("lazyupdate")
+    }, options.throttle));
 
     $w.on("lazyupdate", function(ev) {
       process();
@@ -114,7 +135,7 @@
         init($e);
       });
     }
-    
+
     // be printer friendly and show all elements on document print
     if (options.printable && window.matchMedia) {
         window
